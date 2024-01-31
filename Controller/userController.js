@@ -6,10 +6,11 @@ require("dotenv").config();
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, pic, password, followers, following } = req.body;
-    if (!name || !email || !password) {
-      res.status(400);
-      throw new Error("Please Enter all the Feilds");
+    const { name, username, email, pic, password, followers, following } =
+      req.body;
+    if (!name || !email || !password || !username) {
+      return res.status(400).json({error:"Please Enter all the Feilds"})
+      
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,9 +31,16 @@ const registerUser = async (req, res) => {
       res.status(400);
       throw new Error("User already exists");
     }
+    const userName = await User.findOne({ username });
+
+    if (userName) {
+      res.status(400);
+      throw new Error("User already exists");
+    }
 
     const user = await User.create({
       name,
+      username,
       email,
       password,
       pic,
@@ -44,6 +52,7 @@ const registerUser = async (req, res) => {
       res.status(201).json({
         _id: user._id,
         name: user.name,
+        userName: user.username,
         email: user.email,
         pic: user.pic,
         followers: user.followers,
@@ -61,20 +70,68 @@ const registerUser = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
     // console.log(email, password);
+    if (email) {
+      const user = await User.findOne({ email }).populate("password");
+      console.log(user);
+      if (!user) {
+        return res.status(400).send({
+          message: "User does not exist",
+        });
+      } else {
+        if (user.password === password) {
+          const token = jwt.sign(
+            { id: user._id, email: user.email, name: user.name },
+            process.env.JWT_SECRET
+          );
+          return res.status(200).send({ token });
+        } else {
+          return res.status(400).send({
+            message: "Password is incorrect",
+          });
+        }
+      }
+    } else if (username) {
+      const user = await User.findOne({ username }).populate("password");
+      console.log(user);
+      if (!user) {
+        return res.status(400).send({
+          message: "User does not exist",
+        });
+      } else {
+        console.log(user.password, password);
+        if (user.password === password) {
+          const token = jwt.sign(
+            {
+              id: user._id,
+              email: user.email,
+              name: user.name,
+              username: user.username,
+            },
+            process.env.JWT_SECRET
+          );
+          return res.status(200).send({ token });
+        } else {
+          return res.status(400).send({
+            message: "Password is incorrect",
+          });
+        }
+      }
+    }
 
     const user = await User.findOne({ email }).populate("password");
-    // console.log(user)
+    console.log(user);
     if (!user) {
       return res.status(400).send({
         message: "User does not exist",
       });
     } else {
+      console.log(user.password, password);
       if (user.password === password) {
         const token = jwt.sign(
           { id: user._id, email: user.email, name: user.name },
-          "hgfdsvhjnh"
+          process.env.JWT_SECRET
         );
         return res.status(200).send({ token });
       } else {
@@ -91,7 +148,7 @@ const login = async (req, res) => {
 const checkUserByToken = async (req, res) => {
   try {
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
       return res.status(200).send({ token });
     }
@@ -111,8 +168,10 @@ const followUser = async (req, res) => {
     }
 
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // console.log(decoded)
     const user = await User.findById(decoded.id);
+    console.log(user)
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -163,13 +222,15 @@ const unFollowUser = async (req, res) => {
   try {
     const { userId = "" } = req.params;
     const checkId = await User.findById(userId);
+    console.log(checkId)
     if (!checkId) {
       return res.status(400).send({ message: "User Not Exist" });
     }
 
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
+    console.log(user)
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -189,7 +250,7 @@ const unFollowUser = async (req, res) => {
     }
 
     const followUser = await User.findById(userId);
-    console.log("decode", decoded);
+
     const {
       _id: followerId = "",
       followers: { list: followerList = [], count: followerCount = 0 } = {},
@@ -210,29 +271,43 @@ const unFollowUser = async (req, res) => {
     console.log(err);
   }
 };
-  
-  const singleUser = async(req,res) => {
-    try{
-      const { userId} = req.params;
-      const userExist = await User.findById(userId);
-      if(!userExist){
-        return res.status(400).send({ message: "User Not Exist" });
-      }
 
-    }catch(err){
-        console.log(err)
+const singleUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userExist = await User.findById(userId);
+    if (!userExist) {
+      return res.status(400).send({ message: "User Not Exist" });
     }
+  } catch (err) {
+    console.log(err);
   }
+};
 
-  const searchUser = async(req,res) => {
-    try{
-      const { name } = req.body;
-      const checkUserName = await User.findOne({name});
-      console.log(checkUserName)
-    }catch(err){
-        console.log(err)
+const searchUser = async (req, res) => {
+  try {
+    // const { token } = req.headers;
+    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const keyword = req.query.search
+      ? {
+          $or: [
+            { name: { $regex: req.query.search, $options: "i" } },
+            { email: { $regex: req.query.search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
+
+    if (!users) {
+      return res.status(400).send({ message: "User Not Exist" });
+    } else {
+      res.send(users);
     }
+  } catch (err) {
+    console.log(err);
   }
+};
 
 module.exports = {
   registerUser,
@@ -241,5 +316,5 @@ module.exports = {
   followUser,
   unFollowUser,
   singleUser,
-  searchUser
+  searchUser,
 };
