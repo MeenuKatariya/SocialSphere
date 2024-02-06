@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
+const User = require("./userModal");
 
 const postSchema = mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    content: [{ type: String, required: true }],
     caption: { type: String },
     likes: {
       list: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -14,7 +14,9 @@ const postSchema = mongoose.Schema({
       text: [{ type: String, required: true }],
       count: { type: Number, default: 0 },
       timestamp: { type: Date, default: Date.now }
-    }
+    },
+    post:{ type: String },
+    timestamp: { type: Date, default: Date.now }
   });
   
 

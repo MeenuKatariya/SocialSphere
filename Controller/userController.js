@@ -1,5 +1,5 @@
 const User = require("../Modal/userModal");
-const generateToken = require("../database/generateToken");
+// const generateToken = require("../emailbase/generateToken");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -8,9 +8,9 @@ const registerUser = async (req, res) => {
   try {
     const { name, username, email, pic, password, followers, following } =
       req.body;
+    console.log(name, email, pic, password, username);
     if (!name || !email || !password || !username) {
-      return res.status(400).json({error:"Please Enter all the Feilds"})
-      
+      return res.status(400).json({ error: "Please Enter all the Feilds" });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,14 +28,14 @@ const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      res.status(400);
-      throw new Error("User already exists");
+      console.log(userExists);
+      return res.status(404).json({ error: "User already exists" });
     }
     const userName = await User.findOne({ username });
 
     if (userName) {
-      res.status(400);
-      throw new Error("User already exists");
+      res.status(404);
+      return res.status(404).json({ error: "User already exists" });
     }
 
     const user = await User.create({
@@ -70,11 +70,10 @@ const registerUser = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, username, password } = req.body;
-    // console.log(email, password);
-    if (email) {
+    const { email, password } = req.body;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailRegex.test(email)) {
       const user = await User.findOne({ email }).populate("password");
-      console.log(user);
       if (!user) {
         return res.status(400).send({
           message: "User does not exist",
@@ -87,57 +86,38 @@ const login = async (req, res) => {
           );
           return res.status(200).send({ token });
         } else {
-          return res.status(400).send({
+          return res.status(401).send({
             message: "Password is incorrect",
           });
         }
       }
-    } else if (username) {
-      const user = await User.findOne({ username }).populate("password");
-      console.log(user);
-      if (!user) {
+    } else {
+      const userName = await User.findOne({ username: email }).populate(
+        "password"
+      );
+
+      if (!userName) {
         return res.status(400).send({
           message: "User does not exist",
         });
       } else {
-        console.log(user.password, password);
-        if (user.password === password) {
+        // console.log(userName.password, password);
+        if (userName.password === password) {
           const token = jwt.sign(
             {
-              id: user._id,
-              email: user.email,
-              name: user.name,
-              username: user.username,
+              id: userName._id,
+              email: userName.email,
+              name: userName.name,
+              username: userName.username,
             },
             process.env.JWT_SECRET
           );
           return res.status(200).send({ token });
         } else {
-          return res.status(400).send({
+          return res.status(401).send({
             message: "Password is incorrect",
           });
         }
-      }
-    }
-
-    const user = await User.findOne({ email }).populate("password");
-    console.log(user);
-    if (!user) {
-      return res.status(400).send({
-        message: "User does not exist",
-      });
-    } else {
-      console.log(user.password, password);
-      if (user.password === password) {
-        const token = jwt.sign(
-          { id: user._id, email: user.email, name: user.name },
-          process.env.JWT_SECRET
-        );
-        return res.status(200).send({ token });
-      } else {
-        return res.status(400).send({
-          message: "Password is incorrect",
-        });
       }
     }
   } catch (err) {
@@ -148,6 +128,7 @@ const login = async (req, res) => {
 const checkUserByToken = async (req, res) => {
   try {
     const { token } = req.headers;
+    // console.log(token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
       return res.status(200).send({ token });
@@ -171,7 +152,7 @@ const followUser = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // console.log(decoded)
     const user = await User.findById(decoded.id);
-    console.log(user)
+    console.log(user);
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -222,7 +203,7 @@ const unFollowUser = async (req, res) => {
   try {
     const { userId = "" } = req.params;
     const checkId = await User.findById(userId);
-    console.log(checkId)
+    console.log(checkId);
     if (!checkId) {
       return res.status(400).send({ message: "User Not Exist" });
     }
@@ -230,7 +211,7 @@ const unFollowUser = async (req, res) => {
     const { token } = req.headers;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
-    console.log(user)
+    console.log(user);
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -316,5 +297,6 @@ module.exports = {
   followUser,
   unFollowUser,
   singleUser,
-  searchUser,
+  searchUser
+  
 };

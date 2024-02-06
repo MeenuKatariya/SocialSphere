@@ -3,9 +3,9 @@ const Post = require("../Modal/postSchema");
 const jwt = require("jsonwebtoken");
 const addPost = async (req, res) => {
   try {
-    const { userId, imageUrl, likes, comments, caption } = req.body;
+    const { userId, post, likes, comments, caption } = req.body;
     const { token } = req.headers;
-    // const decoded = jwt.verify(token, "hgfdsvhjnh");
+    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // if(decoded.id != userId){
     //   return res.status(400).send({ message: "user not exist" });
     // }
@@ -18,7 +18,7 @@ const addPost = async (req, res) => {
     }
     const postData = await Post.create({
       userId,
-      imageUrl,
+      post,
       likes,
       comments,
       caption,
@@ -26,7 +26,7 @@ const addPost = async (req, res) => {
     if (postData) {
       res.status(201).json({
         _id: postData.id,
-        imageUrl: postData.imageUrl,
+        post: postData.post,
         likes: postData.likes,
         comments: postData.comments,
         caption: postData.caption,
@@ -40,11 +40,54 @@ const addPost = async (req, res) => {
   }
 };
 
+const allPost = async (req, res) => {
+  try {
+    const { limit = 5, page = 1 } = req.query;
+    // console.log(req.query);
+    const userPost = await Post.find().populate("userId");
+    if (!userPost) {
+      return res.status(400).send({ message: "No Post " });
+    }
+
+    const post = userPost.slice((page - 1) * limit, page * limit);
+    return res.status(200).send(post);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+const allComment = async (req, res) => {
+  try {
+    const userPost = await Post.find().populate("comments.list","username");
+    return res.status(200).send(userPost);
+    console.log(userPost)
+    if (!userPost) {
+      return res.status(400).send({ message: "No Post " });
+    }
+
+    // return res.status(200).send(post);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+const countPost = async (req, res) => {
+  try {
+    const countPost = await Post.find().count();
+    if (!countPost) {
+      return res.status(400).send({ message: "No Post " });
+    }
+    return res.status(200).send(countPost);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
 const deletePost = async (req, res) => {
   try {
     const { postId } = req.body;
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const userPost = await Post.findById(postId);
     if (!userPost) {
@@ -66,8 +109,10 @@ const deletePost = async (req, res) => {
 const likePost = async (req, res) => {
   try {
     const { postId } = req.body;
+    console.log(postId);
+
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded.id) {
       return res.status(400).send({ message: "User Not Exist" });
     }
@@ -105,7 +150,7 @@ const dislikePost = async (req, res) => {
   try {
     const { postId } = req.body;
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded.id) {
       return res.status(400).send({ message: "User Not Exist" });
     }
@@ -130,18 +175,16 @@ const dislikePost = async (req, res) => {
       console.log(updatedResult);
       return res.status(200).send({ message: "Dislike liked successfully" });
     }
-    
-      
   } catch (err) {
     res.status(500).json(err);
   }
 };
 
-const commentPost = async(req,res) => {
-   try{
+const commentPost = async (req, res) => {
+  try {
     const { postId, text } = req.body;
     const { token } = req.headers;
-    const decoded = jwt.verify(token, "hgfdsvhjnh");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded.id) {
       return res.status(400).send({ message: "User Not Exist" });
     }
@@ -153,9 +196,15 @@ const commentPost = async(req,res) => {
     }
     const {
       _id: id = "",
-      comments: { list: commentList = [], count: commentsCount = 0, text:commentText =[] } = {},
+      comments: {
+        list: commentList = [],
+        count: commentsCount = 0,
+        text: commentText = [],
+      } = {},
     } = userPost || {};
-    const updatedComment = [...commentList].map((mongoId) => mongoId.toString());
+    const updatedComment = [...commentList].map((mongoId) =>
+      mongoId.toString()
+    );
     let updatedCount = commentsCount;
     let updatedText = commentText;
     if (updatedComment.includes(decoded.id)) {
@@ -165,57 +214,69 @@ const commentPost = async(req,res) => {
     } else {
       updatedComment.push(decoded.id);
       updatedCount = updatedComment.length;
-      updatedText.push(text)
+      updatedText.push(text);
 
       let updatedResult = await Post.findByIdAndUpdate(id, {
-        comments: { count: updatedCount, list: updatedComment, text: updatedText },
+        comments: {
+          count: updatedCount,
+          list: updatedComment,
+          text: updatedText,
+        },
       });
       console.log(updatedResult);
       return res.status(200).send({ message: "Comment successfully" });
     }
-
-   }catch(err){
+  } catch (err) {
     res.status(500).json(err);
-   }
-}
-
-const deleteComment = async(req,res) => {
-  try{
-   const { postId, text } = req.body;
-   const { token } = req.headers;
-   const decoded = jwt.verify(token, "hgfdsvhjnh");
-   if (!decoded.id) {
-     return res.status(400).send({ message: "User Not Exist" });
-   }
-   const checkLoginUser = await User.findById(decoded.id);
-
-   const userPost = await Post.findById(postId);
-   if (!userPost) {
-     return res.status(400).send({ message: "Post does not exist" });
-   }
-   const {
-     _id: id = "",
-     comments: { list: commentList = [], count: commentsCount = 0, text:commentText =[] } = {},
-   } = userPost || {};
-   const updatedComment = [...commentList].map((mongoId) => mongoId.toString());
-   let updatedCount = commentsCount;
-   let updatedText = commentText;
-   if (updatedComment.includes(decoded.id)) {
-    updatedComment.pop(decoded.id);
-    updatedCount = updatedComment.length;
-    updatedText.pop(text)
-
-    let updatedResult = await Post.findByIdAndUpdate(id, {
-      comments: { count: updatedCount, list: updatedComment, text: updatedText },
-    });
-    console.log(updatedResult);
-    return res.status(200).send({ message: "Comment Delete successfully" });
-   } 
-
-  }catch(err){
-   res.status(500).json(err);
   }
-}
+};
+
+const deleteComment = async (req, res) => {
+  try {
+    const { postId, text } = req.body;
+    const { token } = req.headers;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded.id) {
+      return res.status(400).send({ message: "User Not Exist" });
+    }
+    const checkLoginUser = await User.findById(decoded.id);
+
+    const userPost = await Post.findById(postId);
+    if (!userPost) {
+      return res.status(400).send({ message: "Post does not exist" });
+    }
+    const {
+      _id: id = "",
+      comments: {
+        list: commentList = [],
+        count: commentsCount = 0,
+        text: commentText = [],
+      } = {},
+    } = userPost || {};
+    const updatedComment = [...commentList].map((mongoId) =>
+      mongoId.toString()
+    );
+    let updatedCount = commentsCount;
+    let updatedText = commentText;
+    if (updatedComment.includes(decoded.id)) {
+      updatedComment.pop(decoded.id);
+      updatedCount = updatedComment.length;
+      updatedText.pop(text);
+
+      let updatedResult = await Post.findByIdAndUpdate(id, {
+        comments: {
+          count: updatedCount,
+          list: updatedComment,
+          text: updatedText,
+        },
+      });
+      console.log(updatedResult);
+      return res.status(200).send({ message: "Comment Delete successfully" });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
 
 module.exports = {
   addPost,
@@ -223,5 +284,8 @@ module.exports = {
   likePost,
   dislikePost,
   commentPost,
-  deleteComment
+  deleteComment,
+  allPost,
+  countPost,
+  allComment
 };

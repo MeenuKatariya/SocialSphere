@@ -15,9 +15,10 @@ app.use(express.json());
 app.use("/", userRouter);
 app.use("/", photosRouter);
 app.use("/", chatRouter);
-app.use("/", messageRouter);
+app.use("/message", messageRouter);
+
 app.use(notFound);
-app.use(errorHandler);
+app.use(errorHandler); 
 
 
 app.get("/", (req,res) =>{
