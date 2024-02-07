@@ -131,7 +131,7 @@ const checkUserByToken = async (req, res) => {
     // console.log(token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
-      return res.status(200).send({ token });
+      return res.status(200).send({ token,decoded });
     }
   } catch (error) {
     res.status(500).send({ message: error.message });
