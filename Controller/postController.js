@@ -290,6 +290,5 @@ module.exports = {
   commentPost,
   deleteComment,
   allPost,
-  countPost,
-  allComment,
+  countPost
 };
