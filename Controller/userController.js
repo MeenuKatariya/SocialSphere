@@ -1,5 +1,4 @@
 const User = require("../Modal/userModal");
-// const generateToken = require("../emailbase/generateToken");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -68,6 +67,40 @@ const registerUser = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { updatedName, updatedUsername, updatedPic, updatedPassword, updatedCaption } =
+      req.body;
+    const { token } = req.headers;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+]{8,}$/;
+    if (!passwordRegex.test(updatedPassword)) {
+      return res.status(400).json({
+        error:
+          "Invalid password. Password must be at least 8 characters long and contain at least one letter and one number.",
+      });
+    }
+
+    const {
+      _id: id = "",
+      name = "",
+      username = "",
+      password = "",
+      caption  = ""
+    } = user || {};
+   
+     const updatedUser = await User.findByIdAndUpdate(id,{ name: updatedName, password: updatedPassword, caption: updatedCaption, pic: updatedPic, username: updatedUsername});
+     return res.status(200).send({updatedUser, message: "User Profile Updated" });
+      
+
+     
+     
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -101,7 +134,7 @@ const login = async (req, res) => {
           message: "User does not exist",
         });
       } else {
-        // console.log(userName.password, password);
+        // console.log(userName.password, password)
         if (userName.password === password) {
           const token = jwt.sign(
             {
@@ -131,7 +164,7 @@ const checkUserByToken = async (req, res) => {
     // console.log(token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
-      return res.status(200).send({ token,decoded });
+      return res.status(200).send({ token, decoded });
     }
   } catch (error) {
     res.status(500).send({ message: error.message });
@@ -150,7 +183,6 @@ const followUser = async (req, res) => {
 
     const { token } = req.headers;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log(decoded)
     const user = await User.findById(decoded.id);
     console.log(user);
     const {
@@ -267,8 +299,6 @@ const singleUser = async (req, res) => {
 
 const searchUser = async (req, res) => {
   try {
-    // const { token } = req.headers;
-    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const keyword = req.query.search
       ? {
           $or: [
@@ -292,11 +322,11 @@ const searchUser = async (req, res) => {
 
 module.exports = {
   registerUser,
+  updateProfile,
   login,
   checkUserByToken,
   followUser,
   unFollowUser,
   singleUser,
-  searchUser
-  
+  searchUser,
 };

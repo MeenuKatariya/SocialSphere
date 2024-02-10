@@ -19,6 +19,7 @@ const userSchema = mongoose.Schema({
     list: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     count: { type: Number, default: 0 },
   },
+  caption:{ type: "String" }
 });
 
 const User = mongoose.model("User", userSchema);

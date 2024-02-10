@@ -41,48 +41,26 @@ const addPost = async (req, res) => {
 const allPost = async (req, res) => {
   try {
     const { limit = 5, page = 1 } = req.query;
-    // console.log(req.query);
-    const allPost = await Post.find().populate("userId");
+    const allPost = await Post.find().populate([
+      { path: "userId" },
+      {
+        path: "comments",
+        populate: {
+          path: "list",
+          populate: {
+            path: "createdBy",
+          },
+        },
+      },
+    ]);
+
     if (!allPost) {
       return res.status(400).send({ message: "No Post " });
     }
 
-    const post = allPost.slice((page - 1) * limit, page * limit);
-    return res.status(200).send(post);
-  } catch (err) {
-    res.status(500).json(err);
-  }
-};
+    const totalPost = allPost.slice((page - 1) * limit, page * limit);
 
-// const allPost = async (req, res) => {
-//   try {
-//     const { query: { limit = 10, page = 1 } = {} } = req || {};
-//     const allPosts = await Post.find().populate("userId");
-//     if (allPosts.length) {
-//       const requiredPosts = allPosts.slice((page - 1) * limit, page * limit);
-//       const postsWithComments = requiredPosts.map((post) => {
-//         const {} = post || {};
-//       });
-//     } else {
-//       return res.status(200).send({ message: "No Posts!" });
-//     }
-//   } catch (error) {
-//     return res.status(500).json(error);
-//   }
-// };
-
-const allComment = async (req, res) => {
-  try {
-    const userPost = await Post.find().populate("comments.list", "username");
-    const comments = userPost.map((comment) => {
-      return comment.comments;
-    });
-    return res.status(200).send(comments);
-    if (!userPost) {
-      return res.status(400).send({ message: "No Post " });
-    }
-
-    // return res.status(200).send(post);
+    return res.status(200).send(totalPost);
   } catch (err) {
     res.status(500).json(err);
   }
@@ -110,7 +88,6 @@ const deletePost = async (req, res) => {
     if (!userPost) {
       return res.status(400).send({ message: "Post does not exist" });
     }
-
     const { userId } = userPost;
     if (userId != decoded.id) {
       return res.status(400).send({ message: "You  does not delete the Post" });
@@ -252,7 +229,7 @@ const deleteComment = async (req, res) => {
     if (!decoded.id) {
       return res.status(400).send({ message: "User Not Exist" });
     }
-  
+
     const userPost = await Post.findById(postId);
     if (!userPost) {
       return res.status(400).send({ message: "Post does not exist" });
@@ -261,14 +238,17 @@ const deleteComment = async (req, res) => {
       _id: id = "",
       comments: { list: commentList = [], count: commentsCount = 0 } = {},
     } = userPost || {};
+    // console.log(commentList)
     const userIdsForComment = commentList.map(({ createdBy = "" }) =>
       createdBy.toString()
     );
 
     if (userIdsForComment.includes(decoded.id)) {
-      const deleteComment = commentList.filter((user)=>{ 
-        (user.createdBy).toString() !== decoded.id
-       })
+   
+      const deleteComment = commentList.filter((user) => 
+        
+        user.createdBy.toString() !== decoded.id
+      );
       await Post.findByIdAndUpdate(id, {
         comments: {
           count: deleteComment.length || 0,
