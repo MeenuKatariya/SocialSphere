@@ -14,7 +14,7 @@ const addPost = async (req, res) => {
     }
 
     const postData = await Post.create({
-      userId,
+      userId:checkUserById._doc,
       post,
       likes,
       comments,
@@ -25,9 +25,11 @@ const addPost = async (req, res) => {
       res.status(201).json({
         _id: postData.id,
         post: postData.post,
+        userId:checkUserById._doc,
         likes: postData.likes,
         comments: postData.comments,
         caption: postData.caption,
+        timestamp:postData.timestamp
       });
     } else {
       res.status(400);

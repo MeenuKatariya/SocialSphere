@@ -5,9 +5,15 @@ require("dotenv").config();
 
 const registerUser = async (req, res) => {
   try {
-    const { name, username, email, pic, password, followers, following } =
-      req.body;
-    console.log(name, email, pic, password, username);
+    const {
+      name,
+      username,
+      email,
+      profilePicture,
+      password,
+      followers,
+      following,
+    } = req.body;
     if (!name || !email || !password || !username) {
       return res.status(400).json({ error: "Please Enter all the Feilds" });
     }
@@ -27,7 +33,6 @@ const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      console.log(userExists);
       return res.status(404).json({ error: "User already exists" });
     }
     const userName = await User.findOne({ username });
@@ -42,22 +47,37 @@ const registerUser = async (req, res) => {
       username,
       email,
       password,
-      pic,
+      profilePicture,
       followers,
       following,
     });
 
     if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        userName: user.username,
-        email: user.email,
-        pic: user.pic,
-        followers: user.followers,
-        following: user.following,
-        token: user._id,
-      });
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          followers: user.followers,
+          following: user.following,
+          username: user.username,
+          profilePicture: user.profilePicture,
+          bio: user.bio,
+          password: user.password,
+        },
+        process.env.JWT_SECRET
+      );
+      return res.status(200).send({ token });
+      // res.status(201).json({
+      //   _id: user._id,
+      //   name: user.name,
+      //   userName: user.username,
+      //   email: user.email,
+      //   pic: user.pic,
+      //   followers: user.followers,
+      //   following: user.following,
+      //   token: user._id,
+      // });
     } else {
       res.status(400);
       throw new Error("User not found");
@@ -69,35 +89,58 @@ const registerUser = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { updatedName, updatedUsername, updatedPic, updatedPassword, updatedCaption } =
-      req.body;
+    const { body = {} } = req || {};
+    console.log(body)
     const { token } = req.headers;
+    console.log(token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+]{8,}$/;
-    if (!passwordRegex.test(updatedPassword)) {
-      return res.status(400).json({
-        error:
-          "Invalid password. Password must be at least 8 characters long and contain at least one letter and one number.",
-      });
+
+    await User.findByIdAndUpdate(decoded.id, {
+      ...user._doc,
+      ...body,
+    });
+    console.log(user)
+    // const updatedToken = jwt.sign(
+    //   {
+    //     id: user._id,
+    //     email: user.email,
+    //     name: user.name,
+    //     followers: user.followers,
+    //     following: user.following,
+    //     username: user.username,
+    //     bio: user.bio,
+    //     profilePicture: user.profilePicture,
+    //   },
+    //   process.env.JWT_SECRET
+    // );
+
+    // return res.status(200).send({
+    //   updatedToken
+    //   // updatedUser: { ...user._doc, ...body },
+    // });
+
+    if (user) {
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          followers: user.followers,
+          following: user.following,
+          username: user.username,
+          profilePicture: user.profilePicture,
+          bio: user.bio,
+        },
+        process.env.JWT_SECRET
+      );
+      return res.status(200).send({ token });
+    } else {
+      res.status(400);
+      throw new Error("Profile Not Updated");
     }
-
-    const {
-      _id: id = "",
-      name = "",
-      username = "",
-      password = "",
-      caption  = ""
-    } = user || {};
-   
-     const updatedUser = await User.findByIdAndUpdate(id,{ name: updatedName, password: updatedPassword, caption: updatedCaption, pic: updatedPic, username: updatedUsername});
-     return res.status(200).send({updatedUser, message: "User Profile Updated" });
-      
-
-     
-     
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    res.status(500).send({ message: error.message });
   }
 };
 
@@ -107,6 +150,7 @@ const login = async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emailRegex.test(email)) {
       const user = await User.findOne({ email }).populate("password");
+      // console.log(user)
       if (!user) {
         return res.status(400).send({
           message: "User does not exist",
@@ -114,7 +158,16 @@ const login = async (req, res) => {
       } else {
         if (user.password === password) {
           const token = jwt.sign(
-            { id: user._id, email: user.email, name: user.name },
+            {
+              id: user._id,
+              email: user.email,
+              name: user.name,
+              followers: user.followers,
+              following: user.following,
+              username: user.username,
+              bio: user.bio,
+              profilePicture: user.profilePicture,
+            },
             process.env.JWT_SECRET
           );
           return res.status(200).send({ token });
@@ -134,7 +187,7 @@ const login = async (req, res) => {
           message: "User does not exist",
         });
       } else {
-        // console.log(userName.password, password)
+        console.log(userName);
         if (userName.password === password) {
           const token = jwt.sign(
             {
@@ -142,6 +195,10 @@ const login = async (req, res) => {
               email: userName.email,
               name: userName.name,
               username: userName.username,
+              followers: userName.followers,
+              following: userName.following,
+              bio: userName.bio,
+              profilePicture: userName.profilePicture,
             },
             process.env.JWT_SECRET
           );
@@ -153,17 +210,18 @@ const login = async (req, res) => {
         }
       }
     }
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    res.status(500).send({ message: error.message });
   }
 };
 
 const checkUserByToken = async (req, res) => {
   try {
     const { token } = req.headers;
-    // console.log(token)
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
+      console.log({ token, decoded });
       return res.status(200).send({ token, decoded });
     }
   } catch (error) {
@@ -243,7 +301,7 @@ const unFollowUser = async (req, res) => {
     const { token } = req.headers;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
-    console.log(user);
+
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
