@@ -14,7 +14,7 @@ const addPost = async (req, res) => {
     }
 
     const postData = await Post.create({
-      userId:checkUserById._doc,
+      userId: checkUserById._doc,
       post,
       likes,
       comments,
@@ -25,11 +25,11 @@ const addPost = async (req, res) => {
       res.status(201).json({
         _id: postData.id,
         post: postData.post,
-        userId:checkUserById._doc,
+        userId: checkUserById._doc,
         likes: postData.likes,
         comments: postData.comments,
         caption: postData.caption,
-        timestamp:postData.timestamp
+        timestamp: postData.timestamp,
       });
     } else {
       res.status(400);
@@ -42,7 +42,8 @@ const addPost = async (req, res) => {
 
 const allPost = async (req, res) => {
   try {
-    const { limit = 5, page = 1 } = req.query;
+    const start = parseInt(req.query.start) || 0; 
+    const count = parseInt(req.query.count) || 10; 
     const allPost = await Post.find().populate([
       { path: "userId" },
       {
@@ -59,10 +60,14 @@ const allPost = async (req, res) => {
     if (!allPost) {
       return res.status(400).send({ message: "No Post " });
     }
+   
+    const startIndex = Math.max(0, start);
+    const endIndex = Math.min(startIndex + count, allPost.length);
+  
+    const results = allPost.slice(startIndex, endIndex);
+    // const totalPost = allPost.slice((page - 1) * limit, page * limit);
 
-    const totalPost = allPost.slice((page - 1) * limit, page * limit);
-
-    return res.status(200).send(totalPost);
+    return res.status(200).send(results);
   } catch (err) {
     res.status(500).json(err);
   }
@@ -246,10 +251,8 @@ const deleteComment = async (req, res) => {
     );
 
     if (userIdsForComment.includes(decoded.id)) {
-   
-      const deleteComment = commentList.filter((user) => 
-        
-        user.createdBy.toString() !== decoded.id
+      const deleteComment = commentList.filter(
+        (user) => user.createdBy.toString() !== decoded.id
       );
       await Post.findByIdAndUpdate(id, {
         comments: {
@@ -272,5 +275,5 @@ module.exports = {
   commentPost,
   deleteComment,
   allPost,
-  countPost
+  countPost,
 };

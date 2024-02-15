@@ -12,6 +12,6 @@ router.route("/checkUserByToken").post(checkUserByToken);
 router.route("/followUser/:userId").post(followUser);
 router.route("/unFollow/:userId").post(unFollowUser);
 router.route("/singleUser/:userId").post(singleUser);
-router.route("/").get(protect, searchUser);
+router.route("/").get(searchUser);
 
 module.exports = router; 

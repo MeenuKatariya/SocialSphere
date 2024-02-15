@@ -90,9 +90,9 @@ const registerUser = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { body = {} } = req || {};
-    console.log(body)
+    console.log(body);
     const { token } = req.headers;
-    console.log(token)
+    console.log(token);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
 
@@ -100,7 +100,7 @@ const updateProfile = async (req, res) => {
       ...user._doc,
       ...body,
     });
-    console.log(user)
+    console.log(user);
     // const updatedToken = jwt.sign(
     //   {
     //     id: user._id,
@@ -149,8 +149,22 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emailRegex.test(email)) {
-      const user = await User.findOne({ email }).populate("password");
-      // console.log(user)
+      const user = await User.findOne({ email }).populate("password").populate([
+        {
+          path: "followers",
+          populate: {
+            path: "list"
+          
+          },
+        },
+      ]).populate([ {
+        path: "following",
+        populate: {
+          path: "list"
+        
+        },
+      },])
+      console.log(user)
       if (!user) {
         return res.status(400).send({
           message: "User does not exist",
@@ -221,7 +235,6 @@ const checkUserByToken = async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded) {
-      console.log({ token, decoded });
       return res.status(200).send({ token, decoded });
     }
   } catch (error) {
@@ -241,8 +254,8 @@ const followUser = async (req, res) => {
 
     const { token } = req.headers;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    console.log(user);
+    const user = await User.findById(decoded.id)
+    console.log({user});
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -255,7 +268,7 @@ const followUser = async (req, res) => {
     let updatedFollowingCount = followingCount;
     if (updatedFollowingList.includes(userId)) {
       return res.status(400).send({ message: "Already following" });
-    } else {
+    } else { 
       updatedFollowingList.push(userId);
       updatedFollowingCount = updatedFollowingList.length;
       await User.findByIdAndUpdate(id, {
@@ -263,8 +276,8 @@ const followUser = async (req, res) => {
       });
     }
 
-    const followUser = await User.findById(userId);
-    console.log("decode", decoded);
+    const followUser = await User.findById(userId)
+    // console.log("decode", decoded);
     const {
       _id: followerId = "",
       followers: { list: followerList = [], count: followerCount = 0 } = {},
@@ -282,7 +295,9 @@ const followUser = async (req, res) => {
       updatedFollowerCount = updatedFollowerList.length;
       const updatedUser = await User.findByIdAndUpdate(followerId, {
         followers: { count: updatedFollowerCount, list: updatedFollowerList },
+        
       });
+      return res.status(200).send({ message: "Followed" });
     }
   } catch (err) {
     console.log(err);
@@ -366,7 +381,7 @@ const searchUser = async (req, res) => {
         }
       : {};
 
-    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
+    const users = await User.find(keyword);
 
     if (!users) {
       return res.status(400).send({ message: "User Not Exist" });
