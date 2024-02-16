@@ -56,7 +56,7 @@ const allPost = async (req, res) => {
         },
       },
     ]);
-
+  
     if (!allPost) {
       return res.status(400).send({ message: "No Post " });
     }
@@ -68,22 +68,13 @@ const allPost = async (req, res) => {
     // const totalPost = allPost.slice((page - 1) * limit, page * limit);
 
     return res.status(200).send(results);
+   
   } catch (err) {
     res.status(500).json(err);
   }
 };
 
-const countPost = async (req, res) => {
-  try {
-    const countPost = await Post.find().count();
-    if (!countPost) {
-      return res.status(400).send({ message: "No Post " });
-    }
-    return res.status(200).send(countPost);
-  } catch (err) {
-    res.status(500).json(err);
-  }
-};
+
 
 const deletePost = async (req, res) => {
   try {
@@ -267,6 +258,20 @@ const deleteComment = async (req, res) => {
   }
 };
 
+const userPost = async (req, res) => {
+  try {
+    const {userId = ""} = req.params;
+    const userPost = await Post.find({userId:userId})
+    if (!userPost) {
+      return res.status(400).send({ message: "No Post" });
+    }else{
+      return res.status(200).send(userPost);
+    }
+   } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
 module.exports = {
   addPost,
   deletePost,
@@ -275,5 +280,5 @@ module.exports = {
   commentPost,
   deleteComment,
   allPost,
-  countPost,
+  userPost
 };

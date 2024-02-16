@@ -101,24 +101,6 @@ const updateProfile = async (req, res) => {
       ...body,
     });
     console.log(user);
-    // const updatedToken = jwt.sign(
-    //   {
-    //     id: user._id,
-    //     email: user.email,
-    //     name: user.name,
-    //     followers: user.followers,
-    //     following: user.following,
-    //     username: user.username,
-    //     bio: user.bio,
-    //     profilePicture: user.profilePicture,
-    //   },
-    //   process.env.JWT_SECRET
-    // );
-
-    // return res.status(200).send({
-    //   updatedToken
-    //   // updatedUser: { ...user._doc, ...body },
-    // });
 
     if (user) {
       const token = jwt.sign(
@@ -149,22 +131,25 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emailRegex.test(email)) {
-      const user = await User.findOne({ email }).populate("password").populate([
-        {
-          path: "followers",
-          populate: {
-            path: "list"
-          
+      const user = await User.findOne({ email })
+        .populate("password")
+        .populate([
+          {
+            path: "followers",
+            populate: {
+              path: "list",
+            },
           },
-        },
-      ]).populate([ {
-        path: "following",
-        populate: {
-          path: "list"
-        
-        },
-      },])
-      console.log(user)
+        ])
+        .populate([
+          {
+            path: "following",
+            populate: {
+              path: "list",
+            },
+          },
+        ]);
+      console.log(user);
       if (!user) {
         return res.status(400).send({
           message: "User does not exist",
@@ -254,8 +239,8 @@ const followUser = async (req, res) => {
 
     const { token } = req.headers;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id)
-    console.log({user});
+    const user = await User.findById(decoded.id);
+    console.log({ user });
     const {
       _id: id = "",
       following: { list: followingList = [], count: followingCount = 0 } = {},
@@ -268,7 +253,7 @@ const followUser = async (req, res) => {
     let updatedFollowingCount = followingCount;
     if (updatedFollowingList.includes(userId)) {
       return res.status(400).send({ message: "Already following" });
-    } else { 
+    } else {
       updatedFollowingList.push(userId);
       updatedFollowingCount = updatedFollowingList.length;
       await User.findByIdAndUpdate(id, {
@@ -276,7 +261,7 @@ const followUser = async (req, res) => {
       });
     }
 
-    const followUser = await User.findById(userId)
+    const followUser = await User.findById(userId);
     // console.log("decode", decoded);
     const {
       _id: followerId = "",
@@ -295,12 +280,11 @@ const followUser = async (req, res) => {
       updatedFollowerCount = updatedFollowerList.length;
       const updatedUser = await User.findByIdAndUpdate(followerId, {
         followers: { count: updatedFollowerCount, list: updatedFollowerList },
-        
       });
       return res.status(200).send({ message: "Followed" });
     }
   } catch (err) {
-    console.log(err);
+    res.status(500).json(err);
   }
 };
 
@@ -351,22 +335,26 @@ const unFollowUser = async (req, res) => {
       const updatedUser = await User.findByIdAndUpdate(followerId, {
         followers: { count: updatedFollowerCount, list: updatedFollowerList },
       });
-      return res.status(400).send({ message: "Remove Follower" });
+      return res.status(200).send({ message: "Remove Follower" });
     }
   } catch (err) {
-    console.log(err);
+    res.status(500).json(err);
   }
 };
 
 const singleUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const userExist = await User.findById(userId);
-    if (!userExist) {
+    const { _id: id = "" } = req.params;
+    // console.log("id",{id})
+    const user = await User.findById(id);
+    // console.log("hrllp",{user:user})
+    if (!user) {
       return res.status(400).send({ message: "User Not Exist" });
+    } else {
+      return res.status(200).send(user);
     }
   } catch (err) {
-    console.log(err);
+    res.status(500).json(err);
   }
 };
 
@@ -389,7 +377,7 @@ const searchUser = async (req, res) => {
       res.send(users);
     }
   } catch (err) {
-    console.log(err);
+    res.status(500).json(err);
   }
 };
 
