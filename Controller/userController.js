@@ -90,7 +90,7 @@ const registerUser = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { body = {} } = req || {};
-    console.log(body);
+    console.log(body.name);
     const { token } = req.headers;
     console.log(token);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -104,19 +104,31 @@ const updateProfile = async (req, res) => {
 
     if (user) {
       const token = jwt.sign(
+        // {
+        //   id: user._id,
+        //   email: user.email,
+        //   name: user.name,
+        //   followers: user.followers,
+        //   following: user.following,
+        //   username: user.username,
+        //   profilePicture: user.profilePicture,
+        //   bio: user.bio,
+        // },
         {
           id: user._id,
           email: user.email,
-          name: user.name,
+          name: body.name? body.name  : user.name,
           followers: user.followers,
           following: user.following,
-          username: user.username,
-          profilePicture: user.profilePicture,
-          bio: user.bio,
+          username: body.username? body.username  : user.username,
+          profilePicture: body.profilePicture? body.profilePicture  : user.profilePicture,
+          bio: body.bio? body.bio  : user.bio
+
         },
         process.env.JWT_SECRET
       );
-      return res.status(200).send({ token });
+      // return res.status(200).send({ token });
+      return await checkUserByToken({ headers: { token } }, res);
     } else {
       res.status(400);
       throw new Error("Profile Not Updated");

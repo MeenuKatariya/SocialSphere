@@ -1,59 +1,113 @@
 const Chat = require("../Modal/chatModal");
 const User = require("../Modal/userModal");
-
 //@description     Create or fetch One to One Chat
 //@route           POST /api/chat/
 //@access          Protected
-const accessChat = async (req, res) => {
-  const { userId } = req.body; // second person to chat
+// const accessChat = async (req, res) => {
+//   const { userId } = req.body; // second person to chat
+//   // console.log(userId)
+//   // const { token } = req.headers;
+//   //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//   //   const user = await User.findById(decoded.id);
+//   if (!userId) {
+//     console.log("UserId param not sent with request");
+//     return res.sendStatus(400);
+//   }
 
-  if (!userId) {
-    console.log("UserId param not sent with request");
-    return res.sendStatus(400);
-  }
+//   var isChat = await Chat.find({
+//     $and: [
+//       // need two user for one to one,  one is login and second send by body
+//       { users: { $elemMatch: { $eq: user._id } } }, // match with chat schema users first is login user
+//       { users: { $elemMatch: { $eq: userId } } }, // second is send by body id user
+//     ],
+//   })
+//     // if all match ischat then we taking all data of users by chat schema
 
-  var isChat = await Chat.find({
-    $and: [
-      // need two user for one to one,  one is login and second send by body
-      { users: { $elemMatch: { $eq: req.user._id } } }, // match with chat schema users first is login user
-      { users: { $elemMatch: { $eq: userId } } }, // second is send by body id user
-    ],
-  })
-    // if all match ischat then we taking all data of users by chat schema
+//     .populate("users", "-password") // taking data by user and forget password - populate -password means - no need of password
+//     .populate("latestMessage"); // also taking latest mesaage from chat schema
 
-    .populate("users", "-password") // taking data by user and forget password - populate -password means - no need of password
-    .populate("latestMessage"); // also taking latest mesaage from chat schema
+//   isChat = await User.populate(isChat, {
+//     // link with user login
+//     path: "latestMessage.sender",
+//     select: "name pic email",
+//   });
 
-  isChat = await User.populate(isChat, {
-    // link with user login
-    path: "latestMessage.sender",
-    select: "name pic email",
-  });
+//   if (isChat.length > 0) {
+//     // if there is chat both two people length >0
+//     res.send(isChat[0]); // send first chat
+//   } else {
+//     var chatData = {
+//       // new object of chat that is crated
+//       chatName: "sender",
+//       users: [user._id, userId],
+//     };
 
-  if (isChat.length > 0) {
-    // if there is chat both two people length >0
-    res.send(isChat[0]); // send first chat
-  } else {
-    var chatData = {
-      // new object of chat that is crated
-      chatName: "sender",
-      users: [req.user._id, userId],
-    };
+//     try {
+//       const createdChat = await Chat.create(chatData); // chat create in database
+//       const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
+//         // full chat of two people
+//         "users",
+//         "-password"
+//       );
+//       res.status(200).json(FullChat);
+//     } catch (error) {
+//       res.status(400);
+//       throw new Error(error.message);
+//     }
+//   }
+// };
 
-    try {
-      const createdChat = await Chat.create(chatData); // chat create in database
-      const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
-        // full chat of two people
-        "users",
-        "-password"
-      );
-      res.status(200).json(FullChat);
-    } catch (error) {
-      res.status(400);
-      throw new Error(error.message);
-    }
-  }
+const accessChat = async(req, res) => {
+ try{
+  const { userId } = req.body;
+ console.log(userId);
+
+ }catch(err){
+  res.status(500).json(err);
+ }
+  // if (!userId) {
+  //   console.log("UserId param not sent with request");
+  //   return res.sendStatus(400);
+  // }
+
+  // var isChat = await Chat.find({
+  //   isGroupChat: false,
+  //   $and: [
+  //     { users: { $elemMatch: { $eq: req.user._id } } },
+  //     { users: { $elemMatch: { $eq: userId } } },
+  //   ],
+  // })
+  //   .populate("users", "-password")
+  //   .populate("latestMessage");
+
+  // isChat = await User.populate(isChat, {
+  //   path: "latestMessage.sender",
+  //   select: "name pic email",
+  // });
+
+  // if (isChat.length > 0) {
+  //   res.send(isChat[0]);
+  // } else {
+  //   var chatData = {
+  //     chatName: "sender",
+  //     isGroupChat: false,
+  //     users: [req.user._id, userId],
+  //   };
+
+  //   try {
+  //     const createdChat = await Chat.create(chatData);
+  //     const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
+  //       "users",
+  //       "-password"
+  //     );
+  //     res.status(200).json(FullChat);
+  //   } catch (error) {
+  //     res.status(400);
+  //     throw new Error(error.message);
+  //   }
+  // }
 };
+
 
 //@description     Fetch all chats for a user
 //@route           GET /api/chat/

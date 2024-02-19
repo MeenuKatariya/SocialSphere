@@ -3,10 +3,10 @@ const {
     accessChat,
     fetchChats,
   } = require("../Controller/chatControllers");
-  const { protect } = require("../middleware/protect");
+  const  { protect } = require("../middleware/protect");
 
 const router = express.Router();
-router.route("/").post(protect, accessChat);
+router.route("/").post(accessChat);
 router.route("/").get(protect, fetchChats);
 
 

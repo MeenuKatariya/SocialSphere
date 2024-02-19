@@ -4,8 +4,9 @@ const jwt = require("jsonwebtoken");
 
 const addPost = async (req, res) => {
   try {
+
     const { userId, post, likes, comments, caption } = req.body;
-    // console.log(userId, post, likes, comments, caption)
+    console.log(userId, post, likes, comments, caption)
     const { token } = req.headers;
 
     const checkUserById = await User.findById(userId);
@@ -22,7 +23,7 @@ const addPost = async (req, res) => {
     });
     console.log(postData);
     if (postData) {
-      res.status(201).json({
+      res.status(200).json({
         _id: postData.id,
         post: postData.post,
         userId: checkUserById._doc,
@@ -61,7 +62,7 @@ const allPost = async (req, res) => {
       return res.status(400).send({ message: "No Post " });
     }
    
-    const startIndex = Math.max(0, start);
+    const startIndex = Math.max(0, start) * count;
     const endIndex = Math.min(startIndex + count, allPost.length);
   
     const results = allPost.slice(startIndex, endIndex);
