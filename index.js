@@ -14,7 +14,7 @@ app.use(express.json());
 
 app.use("/user", userRouter);
 app.use("/post", photosRouter);
-app.use("/api/chat", chatRouter);
+app.use("/chat", chatRouter);
 app.use("/message", messageRouter);
 
 app.use(notFound);
